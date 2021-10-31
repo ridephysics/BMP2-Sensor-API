@@ -137,7 +137,7 @@ static int8_t parse_sensor_data(const uint8_t *reg_data, struct bmp2_uncomp_data
  *
  * @param[out] comp_temperature : Compensated temperature data in double.
  * @param[in] uncomp_data       : Contains the uncompensated temperature data.
- * @param[in] dev               : Structure instance of bmp2_dev.
+ * @param[in] calib_param : Structure instance of bmp2_calic_param.
  *
  * @return Result of API execution status
  * @retval 0 -> Success
@@ -146,7 +146,7 @@ static int8_t parse_sensor_data(const uint8_t *reg_data, struct bmp2_uncomp_data
  */
 static int8_t compensate_temperature(double *comp_temperature,
                                      const struct bmp2_uncomp_data *uncomp_data,
-                                     struct bmp2_dev *dev);
+                                     struct bmp2_calib_param *calib_param);
 
 /*!
  * @brief This internal API is used to get the compensated pressure from
@@ -154,7 +154,7 @@ static int8_t compensate_temperature(double *comp_temperature,
  *
  * @param[out] comp_pressure : Compensated pressure data in double.
  * @param[in] uncomp_data : Contains the uncompensated pressure data.
- * @param[in] dev         : Structure instance of bmp2_dev.
+ * @param[in] calib_param : Structure instance of bmp2_calic_param.
  *
  * @return Result of API execution status
  * @retval 0 -> Success
@@ -163,7 +163,7 @@ static int8_t compensate_temperature(double *comp_temperature,
  */
 static int8_t compensate_pressure(double *comp_pressure,
                                   const struct bmp2_uncomp_data *uncomp_data,
-                                  const struct bmp2_dev *dev);
+                                  const struct bmp2_calib_param *calib_param);
 
 #else
 
@@ -173,7 +173,7 @@ static int8_t compensate_pressure(double *comp_pressure,
  *
  * @param[out] comp_temperature : Compensated temperature data in integer.
  * @param[in] uncomp_data       : Contains the uncompensated temperature data.
- * @param[in] dev               : Structure instance of bmp2_dev.
+ * @param[in] calib_param : Structure instance of bmp2_calic_param.
  *
  * @return Result of API execution status
  * @retval 0 -> Success
@@ -182,7 +182,7 @@ static int8_t compensate_pressure(double *comp_pressure,
  */
 static int8_t compensate_temperature(int32_t *comp_temperature,
                                      const struct bmp2_uncomp_data *uncomp_data,
-                                     struct bmp2_dev *dev);
+                                     struct bmp2_calib_param *calib_param);
 
 /*!
  * @brief This internal API is used to get the compensated pressure from
@@ -190,7 +190,7 @@ static int8_t compensate_temperature(int32_t *comp_temperature,
  *
  * @param[out] comp_pressure : Compensated pressure data in integer.
  * @param[in] uncomp_data    : Contains the uncompensated pressure data.
- * @param[in] dev            : Structure instance of bmp2_dev.
+ * @param[in] calib_param : Structure instance of bmp2_calic_param.
  *
  * @return Result of API execution status
  * @retval 0 -> Success
@@ -199,7 +199,7 @@ static int8_t compensate_temperature(int32_t *comp_temperature,
  */
 static int8_t compensate_pressure(uint32_t *comp_pressure,
                                   const struct bmp2_uncomp_data *uncomp_data,
-                                  const struct bmp2_dev *dev);
+                                  const struct bmp2_calib_param *calib_param);
 
 #endif
 
@@ -493,7 +493,7 @@ int8_t bmp2_get_sensor_data(struct bmp2_data *comp_data, struct bmp2_dev *dev)
                 /* Compensate the pressure and/or temperature
                  * data from the sensor
                  */
-                rslt = bmp2_compensate_data(&uncomp_data, comp_data, dev);
+                rslt = bmp2_compensate_data(&uncomp_data, comp_data, &dev->calib_param);
             }
         }
     }
@@ -511,23 +511,21 @@ int8_t bmp2_get_sensor_data(struct bmp2_data *comp_data, struct bmp2_dev *dev)
  */
 int8_t bmp2_compensate_data(const struct bmp2_uncomp_data *uncomp_data,
                             struct bmp2_data *comp_data,
-                            struct bmp2_dev *dev)
+                            struct bmp2_calib_param *calib_param)
 {
     int8_t rslt;
 
-    rslt = null_ptr_check(dev);
-
-    if ((rslt == BMP2_OK) && (uncomp_data != NULL) && (comp_data != NULL))
+    if ((uncomp_data != NULL) && (comp_data != NULL) && (calib_param != NULL))
     {
         /* Initialize to zero */
         comp_data->temperature = 0;
         comp_data->pressure = 0;
 
-        rslt = compensate_temperature(&comp_data->temperature, uncomp_data, dev);
+        rslt = compensate_temperature(&comp_data->temperature, uncomp_data, calib_param);
 
         if (rslt == BMP2_OK)
         {
-            rslt = compensate_pressure(&comp_data->pressure, uncomp_data, dev);
+            rslt = compensate_pressure(&comp_data->pressure, uncomp_data, calib_param);
         }
     }
     else
@@ -761,20 +759,20 @@ static int8_t parse_sensor_data(const uint8_t *reg_data, struct bmp2_uncomp_data
  */
 static int8_t compensate_temperature(double *comp_temperature,
                                      const struct bmp2_uncomp_data *uncomp_data,
-                                     struct bmp2_dev *dev)
+                                     struct bmp2_calib_param *calib_param)
 {
     int8_t rslt = BMP2_OK;
     double var1, var2;
     double temperature;
 
-    var1 = (((double) uncomp_data->temperature) / 16384.0 - ((double) dev->calib_param.dig_t1) / 1024.0) *
-           ((double) dev->calib_param.dig_t2);
+    var1 = (((double) uncomp_data->temperature) / 16384.0 - ((double) calib_param->dig_t1) / 1024.0) *
+           ((double) calib_param->dig_t2);
     var2 =
-        ((((double) uncomp_data->temperature) / 131072.0 - ((double) dev->calib_param.dig_t1) / 8192.0) *
-         (((double) uncomp_data->temperature) / 131072.0 - ((double) dev->calib_param.dig_t1) / 8192.0)) *
-        ((double) dev->calib_param.dig_t3);
+        ((((double) uncomp_data->temperature) / 131072.0 - ((double) calib_param->dig_t1) / 8192.0) *
+         (((double) uncomp_data->temperature) / 131072.0 - ((double) calib_param->dig_t1) / 8192.0)) *
+        ((double) calib_param->dig_t3);
 
-    dev->calib_param.t_fine = (int32_t) (var1 + var2);
+    calib_param->t_fine = (int32_t) (var1 + var2);
     temperature = (var1 + var2) / 5120.0;
 
     if (temperature < BMP2_MIN_TEMP_DOUBLE)
@@ -800,28 +798,28 @@ static int8_t compensate_temperature(double *comp_temperature,
  */
 static int8_t compensate_pressure(double *comp_pressure,
                                   const struct bmp2_uncomp_data *uncomp_data,
-                                  const struct bmp2_dev *dev)
+                                  const struct bmp2_calib_param *calib_param)
 {
     int8_t rslt = BMP2_OK;
     double var1, var2;
     double pressure = 0.0;
 
-    var1 = ((double) dev->calib_param.t_fine / 2.0) - 64000.0;
-    var2 = var1 * var1 * ((double) dev->calib_param.dig_p6) / 32768.0;
-    var2 = var2 + var1 * ((double) dev->calib_param.dig_p5) * 2.0;
-    var2 = (var2 / 4.0) + (((double) dev->calib_param.dig_p4) * 65536.0);
-    var1 = (((double)dev->calib_param.dig_p3) * var1 * var1 / 524288.0 + ((double)dev->calib_param.dig_p2) * var1) /
+    var1 = ((double) calib_param->t_fine / 2.0) - 64000.0;
+    var2 = var1 * var1 * ((double) calib_param->dig_p6) / 32768.0;
+    var2 = var2 + var1 * ((double) calib_param->dig_p5) * 2.0;
+    var2 = (var2 / 4.0) + (((double) calib_param->dig_p4) * 65536.0);
+    var1 = (((double)calib_param->dig_p3) * var1 * var1 / 524288.0 + ((double)calib_param->dig_p2) * var1) /
            524288.0;
-    var1 = (1.0 + var1 / 32768.0) * ((double) dev->calib_param.dig_p1);
+    var1 = (1.0 + var1 / 32768.0) * ((double) calib_param->dig_p1);
 
     if (var1 < 0 || var1 > 0)
     {
         pressure = 1048576.0 - (double)uncomp_data->pressure;
         pressure = (pressure - (var2 / 4096.0)) * 6250.0 / var1;
-        var1 = ((double)dev->calib_param.dig_p9) * pressure * pressure / 2147483648.0;
-        var2 = pressure * ((double)dev->calib_param.dig_p8) / 32768.0;
+        var1 = ((double)calib_param->dig_p9) * pressure * pressure / 2147483648.0;
+        var2 = pressure * ((double)calib_param->dig_p8) / 32768.0;
 
-        pressure = pressure + (var1 + var2 + ((double)dev->calib_param.dig_p7)) / 16.0;
+        pressure = pressure + (var1 + var2 + ((double)calib_param->dig_p7)) / 16.0;
 
         if (pressure < BMP2_MIN_PRES_DOUBLE)
         {
@@ -849,23 +847,23 @@ static int8_t compensate_pressure(double *comp_pressure,
  */
 static int8_t compensate_temperature(int32_t *comp_temperature,
                                      const struct bmp2_uncomp_data *uncomp_data,
-                                     struct bmp2_dev *dev)
+                                     struct bmp2_calib_param *calib_param)
 {
     int8_t rslt = BMP2_OK;
     int32_t var1, var2;
     int32_t temperature;
 
     var1 =
-        ((((uncomp_data->temperature / 8) - ((int32_t) dev->calib_param.dig_t1 * 2))) *
-         ((int32_t) dev->calib_param.dig_t2)) / 2048;
+        ((((uncomp_data->temperature / 8) - ((int32_t) calib_param->dig_t1 * 2))) *
+         ((int32_t) calib_param->dig_t2)) / 2048;
     var2 =
-        (((((uncomp_data->temperature / 16) - ((int32_t) dev->calib_param.dig_t1)) *
-           ((uncomp_data->temperature / 16) - ((int32_t) dev->calib_param.dig_t1))) / 4096) *
-         ((int32_t) dev->calib_param.dig_t3)) / 16384;
+        (((((uncomp_data->temperature / 16) - ((int32_t) calib_param->dig_t1)) *
+           ((uncomp_data->temperature / 16) - ((int32_t) calib_param->dig_t1))) / 4096) *
+         ((int32_t) calib_param->dig_t3)) / 16384;
 
-    dev->calib_param.t_fine = var1 + var2;
+    calib_param->t_fine = var1 + var2;
 
-    temperature = (dev->calib_param.t_fine * 5 + 128) / 256;
+    temperature = (calib_param->t_fine * 5 + 128) / 256;
 
     if (temperature < BMP2_MIN_TEMP_INT)
     {
@@ -892,28 +890,28 @@ static int8_t compensate_temperature(int32_t *comp_temperature,
  */
 static int8_t compensate_pressure(uint32_t *comp_pressure,
                                   const struct bmp2_uncomp_data *uncomp_data,
-                                  const struct bmp2_dev *dev)
+                                  const struct bmp2_calib_param *calib_param)
 {
     int8_t rslt = BMP2_OK;
     int64_t var1, var2, p;
     uint32_t pressure = 0;
 
-    var1 = ((int64_t) dev->calib_param.t_fine) - 128000;
-    var2 = var1 * var1 * (int64_t) dev->calib_param.dig_p6;
-    var2 = var2 + ((var1 * (int64_t) dev->calib_param.dig_p5) * 131072);
-    var2 = var2 + (((int64_t) dev->calib_param.dig_p4) * 34359738368);
-    var1 = ((var1 * var1 * (int64_t) dev->calib_param.dig_p3) / 256) +
-           ((var1 * (int64_t) dev->calib_param.dig_p2) * 4096);
-    var1 = (((((int64_t)1) * 140737488355328) + var1)) * ((int64_t)dev->calib_param.dig_p1) / 8589934592;
+    var1 = ((int64_t) calib_param->t_fine) - 128000;
+    var2 = var1 * var1 * (int64_t) calib_param->dig_p6;
+    var2 = var2 + ((var1 * (int64_t) calib_param->dig_p5) * 131072);
+    var2 = var2 + (((int64_t) calib_param->dig_p4) * 34359738368);
+    var1 = ((var1 * var1 * (int64_t) calib_param->dig_p3) / 256) +
+           ((var1 * (int64_t) calib_param->dig_p2) * 4096);
+    var1 = (((((int64_t)1) * 140737488355328) + var1)) * ((int64_t)calib_param->dig_p1) / 8589934592;
 
     if (var1 != 0)
     {
         p = 1048576 - uncomp_data->pressure;
         p = (((p * 2147483648) - var2) * 3125) / var1;
-        var1 = (((int64_t) dev->calib_param.dig_p9) * (p / 8192) * (p / 8192)) / 33554432;
-        var2 = (((int64_t) dev->calib_param.dig_p8) * p) / 524288;
+        var1 = (((int64_t) calib_param->dig_p9) * (p / 8192) * (p / 8192)) / 33554432;
+        var2 = (((int64_t) calib_param->dig_p8) * p) / 524288;
 
-        p = ((p + var1 + var2) / 256) + (((int64_t)dev->calib_param.dig_p7) * 16);
+        p = ((p + var1 + var2) / 256) + (((int64_t)calib_param->dig_p7) * 16);
         pressure = (uint32_t)p;
 
         if (pressure < BMP2_MIN_PRES_64INT)
@@ -942,20 +940,20 @@ static int8_t compensate_pressure(uint32_t *comp_pressure,
  */
 static int8_t compensate_pressure(uint32_t *comp_pressure,
                                   const struct bmp2_uncomp_data *uncomp_data,
-                                  const struct bmp2_dev *dev)
+                                  const struct bmp2_calib_param *calib_param)
 {
     int8_t rslt = BMP2_OK;
     int32_t var1, var2;
     uint32_t pressure = 0;
 
-    var1 = (((int32_t) dev->calib_param.t_fine) / 2) - (int32_t) 64000;
-    var2 = (((var1 / 4) * (var1 / 4)) / 2048) * ((int32_t) dev->calib_param.dig_p6);
-    var2 = var2 + ((var1 * ((int32_t) dev->calib_param.dig_p5)) * 2);
-    var2 = (var2 / 4) + (((int32_t) dev->calib_param.dig_p4) * 65536);
+    var1 = (((int32_t) calib_param->t_fine) / 2) - (int32_t) 64000;
+    var2 = (((var1 / 4) * (var1 / 4)) / 2048) * ((int32_t) calib_param->dig_p6);
+    var2 = var2 + ((var1 * ((int32_t) calib_param->dig_p5)) * 2);
+    var2 = (var2 / 4) + (((int32_t) calib_param->dig_p4) * 65536);
     var1 =
-        (((dev->calib_param.dig_p3 * (((var1 / 4) * (var1 / 4)) / 8192)) / 8) +
-         ((((int32_t) dev->calib_param.dig_p2) * var1) / 2)) / 262144;
-    var1 = ((((32768 + var1)) * ((int32_t) dev->calib_param.dig_p1)) / 32768);
+        (((calib_param->dig_p3 * (((var1 / 4) * (var1 / 4)) / 8192)) / 8) +
+         ((((int32_t) calib_param->dig_p2) * var1) / 2)) / 262144;
+    var1 = ((((32768 + var1)) * ((int32_t) calib_param->dig_p1)) / 32768);
 
     /* Avoid exception caused by division with zero */
     if (var1 != 0)
@@ -972,9 +970,9 @@ static int8_t compensate_pressure(uint32_t *comp_pressure,
             pressure = (pressure / (uint32_t) var1) * 2;
         }
 
-        var1 = (((int32_t) dev->calib_param.dig_p9) * ((int32_t) (((pressure / 8) * (pressure / 8)) / 8192))) / 4096;
-        var2 = (((int32_t) (pressure / 4)) * ((int32_t) dev->calib_param.dig_p8)) / 8192;
-        pressure = (uint32_t) ((int32_t) pressure + ((var1 + var2 + dev->calib_param.dig_p7) / 16));
+        var1 = (((int32_t) calib_param->dig_p9) * ((int32_t) (((pressure / 8) * (pressure / 8)) / 8192))) / 4096;
+        var2 = (((int32_t) (pressure / 4)) * ((int32_t) calib_param->dig_p8)) / 8192;
+        pressure = (uint32_t) ((int32_t) pressure + ((var1 + var2 + calib_param->dig_p7) / 16));
 
         if (pressure < BMP2_MIN_PRES_32INT)
         {

@@ -339,14 +339,14 @@ int8_t bmp2_get_sensor_data(struct bmp2_data *comp_data, struct bmp2_dev *dev);
  * \code
  * int8_t bmp2_compensate_data(const struct bmp2_uncomp_data *uncomp_data,
  *                               struct bmp2_data *comp_data,
- *                               struct bmp2_dev *dev);
+ *                               struct bmp2_calib_param *calib_param);
  * \endcode
  * @details This API is used to compensate the pressure and
  * temperature data.
  *
  * @param[in] uncomp_data : Contains the uncompensated pressure, temperature data.
  * @param[out] comp_data  : Contains the compensated pressure and/or temperature data.
- * @param[in] dev         : Structure instance of bmp2_dev.
+ * @param[in] calib_param : Structure instance of bmp2_calic_param.
  *
  * @return Result of API execution status.
  *
@@ -357,7 +357,7 @@ int8_t bmp2_get_sensor_data(struct bmp2_data *comp_data, struct bmp2_dev *dev);
  */
 int8_t bmp2_compensate_data(const struct bmp2_uncomp_data *uncomp_data,
                             struct bmp2_data *comp_data,
-                            struct bmp2_dev *dev);
+                            struct bmp2_calib_param *calib_param);
 
 /**
  * \ingroup bmp2
