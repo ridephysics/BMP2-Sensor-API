@@ -386,6 +386,19 @@ int8_t bmp2_compensate_data(const struct bmp2_uncomp_data *uncomp_data,
  */
 int8_t bmp2_compute_meas_time(uint32_t *sampling_time, const struct bmp2_config *conf, const struct bmp2_dev *dev);
 
+/*!
+ *  @brief This API is used to parse the pressure and temperature
+ *  data and store it in the bmp2_uncomp_data structure instance.
+ *
+ *  @param[in] reg_data     : Contains register data which needs to be parsed
+ *  @param[out] uncomp_data : Contains the uncompensated pressure, temperature
+ *
+ * @return Result of API execution status
+ * @retval 0 -> Success
+ * @retval <0 -> Fail
+ */
+int8_t bmp2_parse_sensor_data(const uint8_t *reg_data, struct bmp2_uncomp_data *uncomp_data);
+
 #ifdef __cplusplus
 }
 #endif /* End of CPP guard */

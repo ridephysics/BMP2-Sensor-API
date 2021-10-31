@@ -116,19 +116,6 @@ static int8_t conf_sensor(uint8_t mode, const struct bmp2_config *conf, struct b
  */
 static void set_os_mode(uint8_t *reg_data, const struct bmp2_config *conf);
 
-/*!
- *  @brief This API is used to parse the pressure and temperature
- *  data and store it in the bmp2_uncomp_data structure instance.
- *
- *  @param[in] reg_data     : Contains register data which needs to be parsed
- *  @param[out] uncomp_data : Contains the uncompensated pressure, temperature
- *
- * @return Result of API execution status
- * @retval 0 -> Success
- * @retval <0 -> Fail
- */
-static int8_t parse_sensor_data(const uint8_t *reg_data, struct bmp2_uncomp_data *uncomp_data);
-
 #ifdef BMP2_DOUBLE_COMPENSATION
 
 /*!
@@ -486,7 +473,7 @@ int8_t bmp2_get_sensor_data(struct bmp2_data *comp_data, struct bmp2_dev *dev)
         if (rslt == BMP2_OK)
         {
             /* Parse the read data from the sensor */
-            rslt = parse_sensor_data(temp, &uncomp_data);
+            rslt = bmp2_parse_sensor_data(temp, &uncomp_data);
 
             if (rslt == BMP2_OK)
             {
@@ -725,7 +712,7 @@ static void set_os_mode(uint8_t *reg_data, const struct bmp2_config *conf)
  *  @brief This internal API is used to parse the pressure and temperature
  *  data and store it in the bmp2_uncomp_data structure instance.
  */
-static int8_t parse_sensor_data(const uint8_t *reg_data, struct bmp2_uncomp_data *uncomp_data)
+int8_t bmp2_parse_sensor_data(const uint8_t *reg_data, struct bmp2_uncomp_data *uncomp_data)
 {
     int8_t rslt;
 
