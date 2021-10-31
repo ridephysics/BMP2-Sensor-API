@@ -484,7 +484,7 @@ struct bmp2_calib_param
 
     /*! Fine resolution temperature value */
     int32_t t_fine;
-};
+} __attribute__((packed));
 
 /*!
  * @brief Sensor configuration structure
